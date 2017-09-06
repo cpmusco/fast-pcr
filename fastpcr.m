@@ -73,7 +73,7 @@ if(strcmp(method,'EXP'))
     end
 
 elseif(strcmp(method,'KRYLOV'))
-    pz = lanczos(@(g) ridgeInv(A,A'*(A*g),lambda,solver,tol), z, @(h) softStep(h,3), iter);
+    pz = lanczos(@(g) ridgeInv(A,A'*(A*g),lambda,solver,tol), z, @(h) softStep(h,iter^2), iter);
     
 else
     error('fastpcr:BadInput','the specificed method was not recognized')
