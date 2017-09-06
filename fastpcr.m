@@ -1,4 +1,4 @@
-function [x,patb] = fastpcr(A, b, lambda, iter, solver, method, tol)
+function x = fastpcr(A, b, lambda, iter, solver, method, tol)
 %--------------------------------------------------------------------------
 % Fast Matrix Polynomial Algorithm for Principal Component Regression
 %
@@ -20,8 +20,6 @@ function [x,patb] = fastpcr(A, b, lambda, iter, solver, method, tol)
 %  * method: the technique used for applying matrix polynomials
 %       'KRYLOV' for a standard Krylov subspace method, default
 %       'EXP' for the explicit method analyzed in "Principal Component 
-%       Projection Without Principal Component Analysis", Frostig et al.
-%       'ACCEL' for the acclerated explicit method analyzed in "Principal Component 
 %       Projection Without Principal Component Analysis", Frostig et al.
 %  * tol: accuracy for calls to ridge regression, default 1e-5
 %
@@ -49,7 +47,7 @@ end
 if nargin < 6
     method = 'KRYLOV';
 end
-if nargin < 6
+if nargin < 7
     tol = 1e-5;
 end
 if(lambda < 0 || iter < 1)
@@ -63,96 +61,51 @@ end
 z = A'*b;
 
 if(strcmp(method,'EXP'))
-    pz = ridgeReg(A,A*z,lambda,solver,tol);
+    pz = ridgeInv(A,A'*(A*z),lambda,solver,tol);
 
     % main polynomial recurrence (equivalent but slightly different than 
     % Frostig et al.)
     w = pz - z/2;
     for i = 1:iter
-        t = ridgeReg(A,A*z,lambda,solver,tol);
-        w = 4*(2*i+1)/(2*i)*ridgeReg(A,A*(w - t),lambda,solver,tol);
+        t = ridgeInv(A,A'*(A*w),lambda,solver,tol);
+        w = 4*(2*i+1)/(2*i)*ridgeInv(A,A'*(A*(w - t)),lambda,solver,tol);
         pz = pz + 1/(2*i+1)*w;
     end
 
 elseif(strcmp(method,'KRYLOV'))
-    % Allocate space for Krylov subspace.
-    width = size(A,2);
-    K = zeros(width,iter);
-
-    % Construct Krylov subspace for the matrix inv(A'*A+lambda*I)*A'A
-    K(:,1) = normc(A'*b);
-    for i=2:iter
-        K(:,i) = ridgeReg(A,A*K(:,i-1),lambda);
-        for j = 1:i-1
-            K(:,i) = normc(K(:,i) - K(:,j)*(K(:,j)'*K(:,i)));
-        end
-    end
-    Q = K;
-    % Krylov Postprocessing
-    wth = size(Q,2);
-    T = zeros(wth);
-    for i = 1:wth
-        % Compute Q'*(A'A+\lambda*I)^-1*A'A*Q
-        T(:,i) = Q'*ridgeReg(A,A*Q(:,i),lambda);
-    end
-    % Economy size dense SVD.
-    [U,S,V] = svd(T,0);
-    % symmetric step applied to S
-    s = diag(S);
-    step = (s > .5);
-    patb = Q*(U*(diag(step)*(V'*(Q'*(A'*b)))));
-    
+    pz = lanczos(@(g) ridgeInv(A,A'*(A*g),lambda,solver,tol), z, @(h) softStep(h,iter^2), iter);
     
 else
     error('fastpcr:BadInput','the specificed method was not recognized')
 end
 
-    x = ridgeInv(A, p, sqrt(tol)*lambda, solver, sqrt(tol));
-
-
 %%% Principal Component Regression %%%
-x = robustReg2(A,pz,lambda);
+x = robustReg(A, pz, lambda, solver, tol, 'FULL');
 end
 %--------------------------------------------------------------------------
 
 %--------------------------------------------------------------------------
-% Ridge Regression
-%
-%  note: MATLAB's lsqr is used as default, but could be replaced with any
-%  fast ridge regression routine
+% Soft Step Function
 %--------------------------------------------------------------------------
-function x = ridgeReg(A,b,lambda)
-    wth = size(A,2);
-    [x,~] = lsqr([A;sqrt(lambda)*eye(wth)],[b;zeros(wth,1)]);
+function step = softStep(s,q)
+% applies "soft step" function with parameter q to s, which should lie 
+% in [0,1] (see https://arxiv.org/pdf/1708.07788.pdf, Equation 60) 
+% if s < 1/2 it is mapped towards 0, if s > 1/2 it is mapped towards 1
+
+% shift from [0,1] --> [-1,1]
+s = s*2-1;
+% in case s falls outside the expected range
+s = min(s,1); s = max(s,-1);
+
+weight = 1;
+step = s;
+for i = 1:q
+    weight = weight*(2*i - 1)/(2*i);
+    step = step + weight*s.*(1-s.^2).^i;
 end
-
-%--------------------------------------------------------------------------
-% Robust Inversion (to map Projection --> Regression)
-%--------------------------------------------------------------------------
-
-function x = robustReg1(A,pz,lambda)
-% method used in http://arxiv.org/abs/1602.06872
-    riter = 20; % default
-    function y = afun(z,~)
-        y = A'*(A*z) + lambda*z;
-    end
-    [t,~] = lsqr(@afun,pz);
-    x = t;
-    for j = 1:riter-1
-        [u,~] = lsqr(@afun,x);
-        x = t + lambda*u;
-    end
+% shift from [-1,1] -->  [0,1]
+step = (step+1)/2;
 end
-
-function x = robustReg2(A,pz,lambda)
-% simpler method that works well in practice
-    tol = 1e-5; %default
-    function y = afun(z,~)
-        y = A'*(A*z) + tol*lambda*z;
-    end
-    [x,~] = pcg(@afun,pz);
-end
-
 
 
 

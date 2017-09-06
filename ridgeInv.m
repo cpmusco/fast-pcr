@@ -41,7 +41,7 @@ end
 
 if(strcmp(solver,'CG'))
 % default MATLAB CG
-    [x,~] = pcg(@afun,b,tol,1000);
+    [x,~] = pcg(@afun,b,tol,10000);
 
 elseif(strcmp(solver,'SVRG'))
 % Simple (and slow) SVRG implementation (see Johnson, Zhang "Accelerating 
