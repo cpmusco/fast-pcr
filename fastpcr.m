@@ -1,4 +1,4 @@
-function [x,patb] = fastpcr(A, b, lambda, iter, solver, method)
+function [x,patb] = fastpcr(A, b, lambda, iter, solver, method, tol)
 %--------------------------------------------------------------------------
 % Fast Matrix Polynomial Algorithm for Principal Component Regression
 %
@@ -10,9 +10,9 @@ function [x,patb] = fastpcr(A, b, lambda, iter, solver, method)
 %  * lambda : eigenvalue cut off 
 %       All principal components of A'*A with eigenvalue < lambda will be 
 %       ignored for the regression.
-%  * iter : number of iterations
+%  * iter : number of iterations, default = 10
 %       Each iteration requires the solution of one ridge regression
-%       problem on A with ridge parameter lambda, default = 25
+%       problem on A with ridge parameter lambda.
 %  * solver: black box routine for ridge regression
 %       'CG' for iterative Conjugate Gradient solver, default
 %       'SVRG' for iterative Stochastic Variance Reduced Gradient solver
@@ -23,25 +23,37 @@ function [x,patb] = fastpcr(A, b, lambda, iter, solver, method)
 %       Projection Without Principal Component Analysis", Frostig et al.
 %       'ACCEL' for the acclerated explicit method analyzed in "Principal Component 
 %       Projection Without Principal Component Analysis", Frostig et al.
+%  * tol: accuracy for calls to ridge regression, default 1e-5
 %
 %
 %  output:
-%  * patb : approximation projection of A^T b onto top subspace of A
-%  * x : approximate solution to PCR
+%  * x : approximate solution to PCR with parameter lambda. 
+%        Specifically, let P_lambda be a matrix that projects onto the
+%        space spanned by all
+%  eigenvectors of A'*A with eigenvalue > lambda. x approximates
 %--------------------------------------------------------------------------
 
 % Check input arguments and set defaults.
-if nargin > 4
-    error('rpcr:TooManyInputs','requires at most 4 input arguments');
+if nargin > 7
+    error('fastpcr:TooManyInputs','requires at most 4 input arguments');
 end
 if nargin < 3
-    error('rpcr:TooFewInputs','requires at least 3 input arguments');
+    error('fastpcr:TooFewInputs','requires at least 3 input arguments');
 end
 if nargin < 4
-    iter = 25;
+    iter = 10;
+end
+if nargin < 5
+    solver = 'CG';
+end
+if nargin < 6
+    method = 'KRYLOV';
+end
+if nargin < 6
+    tol = 1e-5;
 end
 if(lambda < 0 || iter < 1)
-    error('fpcr:BadInput','one or more inputs outside required range');
+    error('fastpcr:BadInput','one or more inputs outside required range');
 end
 
 %%% Principal Component Projection %%%
@@ -50,17 +62,53 @@ end
 % note however that the following code works for projecting any vector z
 z = A'*b;
 
-% start building up our projected vector, pz
-pz = ridgeReg(A,A*z,lambda);
+if(strcmp(method,'EXP'))
+    pz = ridgeReg(A,A*z,lambda,solver,tol);
 
-% main polynomial recurrence (equivalent but slightly different than 
-% http://arxiv.org/abs/1602.06872)
-w = pz - z/2;
-for i = 1:iter
-    w = 4*(2*i+1)/(2*i)*ridgeReg(A,A*(w - ridgeReg(A,A*w,lambda)), lambda);
-    pz = pz + 1/(2*i+1)*w;
+    % main polynomial recurrence (equivalent but slightly different than 
+    % Frostig et al.)
+    w = pz - z/2;
+    for i = 1:iter
+        t = ridgeReg(A,A*z,lambda,solver,tol);
+        w = 4*(2*i+1)/(2*i)*ridgeReg(A,A*(w - t),lambda,solver,tol);
+        pz = pz + 1/(2*i+1)*w;
+    end
+
+elseif(strcmp(method,'KRYLOV'))
+    % Allocate space for Krylov subspace.
+    width = size(A,2);
+    K = zeros(width,iter);
+
+    % Construct Krylov subspace for the matrix inv(A'*A+lambda*I)*A'A
+    K(:,1) = normc(A'*b);
+    for i=2:iter
+        K(:,i) = ridgeReg(A,A*K(:,i-1),lambda);
+        for j = 1:i-1
+            K(:,i) = normc(K(:,i) - K(:,j)*(K(:,j)'*K(:,i)));
+        end
+    end
+    Q = K;
+    % Krylov Postprocessing
+    wth = size(Q,2);
+    T = zeros(wth);
+    for i = 1:wth
+        % Compute Q'*(A'A+\lambda*I)^-1*A'A*Q
+        T(:,i) = Q'*ridgeReg(A,A*Q(:,i),lambda);
+    end
+    % Economy size dense SVD.
+    [U,S,V] = svd(T,0);
+    % symmetric step applied to S
+    s = diag(S);
+    step = (s > .5);
+    patb = Q*(U*(diag(step)*(V'*(Q'*(A'*b)))));
+    
+    
+else
+    error('fastpcr:BadInput','the specificed method was not recognized')
 end
-patb = pz;
+
+    x = ridgeInv(A, p, sqrt(tol)*lambda, solver, sqrt(tol));
+
 
 %%% Principal Component Regression %%%
 x = robustReg2(A,pz,lambda);
