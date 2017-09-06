@@ -93,16 +93,18 @@ function step = softStep(s,q)
 % if s < 1/2 it is mapped towards 0, if s > 1/2 it is mapped towards 1
 
 % shift from [0,1] --> [-1,1]
-s = s*2-1;
+step = s*2-1;
 % in case s falls outside the expected range
-s = min(s,1); s = max(s,-1);
+step = min(step,1); step = max(step,-1);
 
-weight = 1;
-step = s;
-for i = 1:q
-    weight = weight*(2*i - 1)/(2*i);
-    step = step + weight*s.*(1-s.^2).^i;
-end
+if(step < 1/q) step = -1; end
+if(step > 1/q) step = 1; end
+% weight = 1;
+% step = s;
+% for i = 1:q
+%     weight = weight*(2*i - 1)/(2*i);
+%     step = step + weight*s.*(1-s.^2).^i;
+% end
 % shift from [-1,1] -->  [0,1]
 step = (step+1)/2;
 end
