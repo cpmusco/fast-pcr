@@ -1,4 +1,4 @@
-function [x] = ridgeInv(A, b, lambda, solver, tol)
+function [x] = ridgeInv(A, b, lambda, solver, tol, L)
 %--------------------------------------------------------------------------
 % Ridge Regression
 %
@@ -11,6 +11,7 @@ function [x] = ridgeInv(A, b, lambda, solver, tol)
 %  * solver : 'CG' for iterative Conjugate Gradient solver, default
 %             'SVRG' for iterative Stochastic Variance Reduced Gradient solver 
 %  * tol : desired tolerance, default 1e-6
+%  * L : estimate for norm(A'*A), if not provided it will be computed
 %
 %  output:
 %  * x : approximate solution to xstar = inv(A^T A + lambda*I)*b. 
@@ -31,6 +32,9 @@ end
 if nargin < 5
     tol = 1e-6;
 end
+if nargin < 6
+    L = svds(A,1)^2;
+end
 if(lambda < 0 || tol < 0)
     error('ridgeInv:BadInput','one or more inputs outside required range');
 end
@@ -41,14 +45,14 @@ end
 
 if(strcmp(solver,'CG'))
 % default MATLAB CG
-    [x,~] = pcg(@afun,b,tol,10000);
+    [x,~] = pcg(@afun,b,tol,100 + ceil(sqrt(L/lambda)));
 
 elseif(strcmp(solver,'SVRG'))
 % Simple (and slow) SVRG implementation (see Johnson, Zhang "Accelerating 
 % Stochastic Gradient Descent using Predictive Variance Reduction"
     n = size(A,1);
     m = n/10;
-    eta = 1/norm(A,'fro')^2;
+    eta = 1/L;
     x = zeros(size(b));
     xt = x;
     done = false;

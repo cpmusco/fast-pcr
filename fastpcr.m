@@ -19,7 +19,7 @@ function [x,pz] = fastpcr(A, b, lambda, iter, solver, method, tol)
 %       ** or any other solver implemented in ridgeInv.m **
 %  * method: the technique used for applying matrix polynomials
 %       'KRYLOV' for a standard Krylov subspace method, default
-%       'EXP' for the explicit method analyzed in "Principal Component 
+%       'EXPLICIT' for the explicit method analyzed in "Principal Component 
 %       Projection Without Principal Component Analysis", Frostig et al.
 %  * tol: accuracy for calls to ridge regression, default 1e-5
 %
@@ -59,28 +59,29 @@ end
 % for ridge regression, we project A'*b onto A's top singular directions 
 % note however that the following code works for projecting any vector z
 z = A'*b;
+L = svds(A,1)^2;
 
-if(strcmp(method,'EXP'))
-    pz = ridgeInv(A,A'*(A*z),lambda,solver,tol);
+if(strcmp(method,'EXPLICIT'))
+    pz = ridgeInv(A,A'*(A*z),lambda,solver,tol,L);
 
     % main polynomial recurrence (equivalent but slightly different than 
     % Frostig et al.)
     w = pz - z/2;
     for i = 1:iter
-        t = ridgeInv(A,A'*(A*w),lambda,solver,tol);
-        w = 4*(2*i+1)/(2*i)*ridgeInv(A,A'*(A*(w - t)),lambda,solver,tol);
+        t = ridgeInv(A,A'*(A*w),lambda,solver,tol,L);
+        w = 4*(2*i+1)/(2*i)*ridgeInv(A,A'*(A*(w - t)),lambda,solver,tol,L);
         pz = pz + 1/(2*i+1)*w;
     end
 
 elseif(strcmp(method,'KRYLOV'))
-    pz = lanczos(@(g) ridgeInv(A,A'*(A*g),lambda,solver,tol), z, @(h) softStep(h,iter^2), iter);
+    pz = lanczos(@(g) ridgeInv(A,A'*(A*g),lambda,solver,tol,L), z, @(h) softStep(h,iter^2), iter);
     
 else
     error('fastpcr:BadInput','the specificed method was not recognized')
 end
 
 %%% Principal Component Regression %%%
-x = robustReg(A, pz, lambda, solver, tol, 'SIMPLE');
+x = robustReg(A, pz, lambda, solver, tol, 'FULL');
 end
 %--------------------------------------------------------------------------
 
@@ -93,21 +94,11 @@ function step = softStep(s,q)
 % if s < 1/2 it is mapped towards 0, if s > 1/2 it is mapped towards 1
 
 % shift from [0,1] --> [-1,1]
-step = s*2-1;
+s = s*2-1;
 % in case s falls outside the expected range
-step = min(step,1); step = max(step,-1);
+s = min(s,1); s = max(s,-1);
 
-if(step < 1/q) step = -1; end
-if(step > 1/q) step = 1; end
-% weight = 1;
-% step = s;
-% for i = 1:q
-%     weight = weight*(2*i - 1)/(2*i);
-%     step = step + weight*s.*(1-s.^2).^i;
-% end
-% shift from [-1,1] -->  [0,1]
-step = (step+1)/2;
+% for speed we actually use a very near continuous approximation based on 
+% the Gaussian CDF
+step = normcdf(s,0,1/sqrt(2*q));
 end
-
-
-

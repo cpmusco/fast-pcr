@@ -19,8 +19,8 @@ function x = lanczos(A, b, matfun, iter)
 %  * A : symmetric matrix nxn matrix or a function afun(A,z) for
 %  computing A*z for any vector z
 %  * b : length n vector
-%  * matfun : MATLAB function handle for scalar function, 
-                % e.g. 1/x,exp(x),sqrt(x)
+%  * matfun : MATLAB handle for scalar function like 1/x, eps(x), sqrt(x), etc.
+                % e.g. lanczos(A, b, @(z) 1/z, iter)
 %  * iter : number of iterations, default 25
 %
 %

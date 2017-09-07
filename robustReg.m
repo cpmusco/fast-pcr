@@ -15,8 +15,10 @@ function [x] = robustReg(A, p, lambda, solver, tol, method)
 %       practice it is not essential to compute tol exactly. Default = 1e-5.
 %  * solver : solver to use in required calls to ridge regression oracle
 %       See ridgeInv.m for potential options.
-%  * method : 'SIMPLE' -- simple regularized regression, default (and suggested)
-%             'FULL' -- matrix polynomial method used in Frostig et al (better
+%  * method : 'FULL' -- matrix polynomial method, default and recommended
+%               See Frostig et al. for details.
+%             'SIMPLE' -- simple regularized regression
+%             
 %
 %  output:
 %  * x : approximate solution to inv(P_lambda*A'*A)*p
@@ -33,18 +35,20 @@ if nargin < 5
     tol = 1e-5;
 end
 if nargin < 6
-    method = 'SIMPLE';
+    method = 'FULL';
 end
 
+L = svds(A,1)^2;
+
 if(strcmp(method,'SIMPLE'))
-    x = ridgeInv(A, p, sqrt(tol)*lambda, solver, sqrt(tol));
+    x = ridgeInv(A, p, tol*lambda, solver, tol, L);
 
 elseif(strcmp(method,'FULL'))
     riter = 2*log(1/tol);
-    t = ridgeInv(A, p, lambda, solver, tol);
+    t = ridgeInv(A, p, lambda, solver, tol, L);
     x = t;
     for j = 1:riter-1
-        x = t + lambda*ridgeInv(A, x, lambda, solver, tol);
+        x = t + lambda*ridgeInv(A, x, lambda, solver, tol, L);
     end
     
 else
