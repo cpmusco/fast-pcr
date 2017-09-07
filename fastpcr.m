@@ -1,4 +1,4 @@
-function [x,pz] = fastpcr(A, b, lambda, iter, solver, method, tol)
+function x = fastpcr(A, b, lambda, iter, solver, method, tol)
 %--------------------------------------------------------------------------
 % Fast Matrix Polynomial Algorithm for Principal Component Regression
 %
@@ -7,7 +7,7 @@ function [x,pz] = fastpcr(A, b, lambda, iter, solver, method, tol)
 %  input:
 %  * A : design matrix
 %  * b : response vector
-%  * lambda : eigenvalue cut off 
+%  * lambda : eigenvalue cut off, default = norm(A'*A)/100;
 %       All principal components of A'*A with eigenvalue < lambda will be 
 %       ignored for the regression.
 %  * iter : number of iterations, default = 10
@@ -35,8 +35,11 @@ function [x,pz] = fastpcr(A, b, lambda, iter, solver, method, tol)
 if nargin > 7
     error('fastpcr:TooManyInputs','requires at most 4 input arguments');
 end
-if nargin < 3
+if nargin < 2
     error('fastpcr:TooFewInputs','requires at least 3 input arguments');
+end
+if nargin < 3
+    lambda = svds(A,1)^2/100;
 end
 if nargin < 4
     iter = 10;
