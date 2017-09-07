@@ -7,42 +7,42 @@ function x = fastpcr(A, b, lambda, iter, solver, method, tol)
 %  input:
 %  * A : design matrix
 %  * b : response vector
-%  * lambda : eigenvalue cut off, default = norm(A'*A)/100;
+%  * lambda : eigenvalue cut off, default = ||A||_2^2/100.
 %       All principal components of A'*A with eigenvalue < lambda will be 
 %       ignored for the regression.
-%  * iter : number of iterations, default = 10
+%  * iter : number of iterations, default = 10.
 %       Each iteration requires the solution of one ridge regression
 %       problem on A with ridge parameter lambda.
-%  * solver: black box routine for ridge regression
-%       'CG' for iterative Conjugate Gradient solver, default
-%       'SVRG' for iterative Stochastic Variance Reduced Gradient solver
+%  * solver: black box routine for ridge regression.
+%       'CG' for Conjugate Gradient solver, default
+%       'SVRG' for Stochastic Variance Reduced Gradient solver
 %       ** or any other solver implemented in ridgeInv.m **
-%  * method: the technique used for applying matrix polynomials
+%  * method: the technique used for applying matrix polynomials.
 %       'KRYLOV' for a standard Krylov subspace method, default
 %       'EXPLICIT' for the explicit method analyzed in "Principal Component 
-%       Projection Without Principal Component Analysis", Frostig et al.
+%       Projection Without Principal Component Analysis", Frostig et al. ICML '16
 %  * tol: accuracy for calls to ridge regression, default 1e-5
-%
+
 %
 %  output:
 %  * x : approximate solution to PCR with parameter lambda. 
-%        Specifically, let P_lambda be a matrix that projects onto the
-%        space spanned by all
-%  eigenvectors of A'*A with eigenvalue > lambda. x approximates
+%        Specifically, let P_lambda be a matrix that projects onto the space
+%        spanned by all eigenvectors of A'*A with eigenvalue > lambda. x
+%        approximates P_lambda*pinv(A'*A)*A'*b.
 %--------------------------------------------------------------------------
 
 % Check input arguments and set defaults.
 if nargin > 7
-    error('fastpcr:TooManyInputs','requires at most 4 input arguments');
+    error('fastpcr:TooManyInputs','requires at most 7 input arguments');
 end
 if nargin < 2
-    error('fastpcr:TooFewInputs','requires at least 3 input arguments');
+    error('fastpcr:TooFewInputs','requires at least 2 input arguments');
 end
 if nargin < 3
     lambda = svds(A,1)^2/100;
 end
 if nargin < 4
-    iter = 10;
+    iter = 50;
 end
 if nargin < 5
     solver = 'CG';
