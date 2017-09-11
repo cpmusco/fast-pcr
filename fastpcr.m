@@ -18,7 +18,7 @@ function x = fastpcr(A, b, lambda, iter, solver, method, tol)
 %       'SVRG' for Stochastic Variance Reduced Gradient solver
 %       ** or any other solver implemented in ridgeInv.m **
 %  * method: the technique used for applying matrix polynomials.
-%       'KRYLOV' for a standard Krylov subspace method, default
+%       'LANCZOS' for the standard Lanczos/Krylov subspace method, default
 %       'EXPLICIT' for the explicit method analyzed in "Principal Component 
 %       Projection Without Principal Component Analysis", Frostig et al. ICML '16
 %  * tol: accuracy for calls to ridge regression, default 1e-5
@@ -48,7 +48,7 @@ if nargin < 5
     solver = 'CG';
 end
 if nargin < 6
-    method = 'KRYLOV';
+    method = 'LANCZOS';
 end
 if nargin < 7
     tol = 1e-5;
@@ -76,11 +76,11 @@ if(strcmp(method,'EXPLICIT'))
         pz = pz + 1/(2*i+1)*w;
     end
 
-elseif(strcmp(method,'KRYLOV'))
+elseif(strcmp(method,'LANCZOS'))
     pz = lanczos(@(g) ridgeInv(A,A'*(A*g),lambda,solver,tol,L), z, @(h) softStep(h,iter^2), iter);
     
 else
-    error('fastpcr:BadInput','the specificed method was not recognized')
+    error('fastpcr:BadInput','the specified polynomial approximation method was not recognized')
 end
 
 %%% Principal Component Regression %%%
