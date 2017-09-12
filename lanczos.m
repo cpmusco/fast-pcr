@@ -1,17 +1,9 @@
 function x = lanczos(A, b, matfun, iter)
 %--------------------------------------------------------------------------
 % Classical Lanczos method for matrix function approximation
-% Analyzed in e.g.:
-% "Error analysis of the Lanczos algorithm for tridiagonalizing a 
+% Analyzed in e.g.: 
+%   "Error analysis of the Lanczos algorithm for tridiagonalizing a 
 %   symmetric matrix" -- Christopher Paige
-% "Accuracy and effectiveness of the Lanczos algorithm for the
-%   symmetric eigenproblem" -- Christopher Paige
-% "Behavior of slightly perturbed Lanczos and conjugate-gradient
-%   recurrences" -- Anne Greenbaum
-% "Error bounds in the simple Lanczos procedure for computing functions 
-%   of symmetric matrices and eigenvalues" -- Druskin, Knizhnerman
-% "Stability of the Lanczos Method for Matrix Function Approximation"
-%   -- Musco, Musco, Sidford
 %
 % usage : 
 %
@@ -19,10 +11,9 @@ function x = lanczos(A, b, matfun, iter)
 %  * A : symmetric matrix nxn matrix or a function afun(A,z) for
 %  computing A*z for any vector z
 %  * b : length n vector
-%  * matfun : MATLAB handle for scalar function like 1/x, eps(x), sqrt(x), etc.
+%  * matfun : MATLAB handle for scalar function f(x) like 1/x, eps(x), sqrt(x), etc.
                 % e.g. lanczos(A, b, @(z) 1/z, iter)
 %  * iter : number of iterations, default 25
-%
 %
 %  output:
 %  * x : approximation to f(A)b
@@ -35,6 +26,9 @@ if nargin < 3
 end
 if nargin < 4
     iter = 25;
+end
+if(iter < 1)
+    error('lanczos:BadInput','one or more inputs outside required range');
 end
 
 if(~isa(A,'function_handle'))

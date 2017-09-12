@@ -8,9 +8,10 @@ function x = fastpcr(A, b, lambda, iter, solver, method, tol)
 %  * A : design matrix
 %  * b : response vector
 %  * lambda : eigenvalue cut off, default = ||A||_2^2/100.
-%       All principal components of A'*A with eigenvalue < lambda will be 
-%       ignored for the regression.
-%  * iter : number of iterations, default = 10.
+%       All eigenvectors of A'*A with eigenvalue < lambda (i.e., all 
+%       singular vectors of A with squared singular values < lambda)       
+%       will be  ignored for the regression.
+%  * iter : number of iterations, default = 50.
 %       Each iteration requires the solution of one ridge regression
 %       problem on A with ridge parameter lambda.
 %  * solver: black box routine for ridge regression.
@@ -18,7 +19,7 @@ function x = fastpcr(A, b, lambda, iter, solver, method, tol)
 %       'SVRG' for Stochastic Variance Reduced Gradient solver
 %       ** or any other solver implemented in ridgeInv.m **
 %  * method: the technique used for applying matrix polynomials.
-%       'LANCZOS' for the standard Lanczos/Krylov subspace method, default
+%       'LANCZOS' for a standard Lanczos method, default
 %       'EXPLICIT' for the explicit method analyzed in "Principal Component 
 %       Projection Without Principal Component Analysis", Frostig et al. ICML '16
 %  * tol: accuracy for calls to ridge regression, default 1e-5
@@ -53,7 +54,7 @@ end
 if nargin < 7
     tol = 1e-5;
 end
-if(lambda < 0 || iter < 1)
+if(lambda < 0 || tol < 0 || iter < 1)
     error('fastpcr:BadInput','one or more inputs outside required range');
 end
 

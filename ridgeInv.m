@@ -16,7 +16,7 @@ function [x] = ridgeInv(A, b, lambda, solver, tol, L)
 %  output:
 %  * x : approximate solution to xstar = inv(A^T A + lambda*I)*b. 
 
-%  x should satisfies ||(A^TA + lambda*I)x - b|| <= tol*||b||. 
+%  x satisfies ||(A^TA + lambda*I)x - b|| <= tol*||b||. 
 %--------------------------------------------------------------------------
 
 % Check input arguments and set defaults.
@@ -35,7 +35,7 @@ end
 if nargin < 6
     L = svds(A,1)^2;
 end
-if(lambda < 0 || tol < 0)
+if(lambda < 0 || tol < 0 || L < 0)
     error('ridgeInv:BadInput','one or more inputs outside required range');
 end
 
