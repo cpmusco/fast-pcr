@@ -33,15 +33,12 @@ Download `fastpcr.m`,`lanczos.m`,`ridgeInv.m`, and `robustReg.m`, [add to MATLAB
 
 ```
 % generate random test problem
-A = randn(200,100); b = randn(200,1); k = 10;
-[U,S,V] = svds(A,100);
-
+A = randn(4000,1000); b = randn(4000,1); k = 500;
+[U,S,V] = svds(A,1000);
 % modify to have (slightly) decaying spectrum
-s = diag(S); s(1:k) = s(1:k)+2;
+s = diag(S); s(1:k) = s(1:k)+4;
 S = diag(s); A = U*S*V';
-
-%set eigenvalue cut off
-lambda = (s(k)-1)^2;
+lambda = (s(k)-2)^2;
 
 % compute approximate PCR solution
 x = fastpcr(A, b, lambda, 50, 'CG', 'LANCZOS', 1e-5);
