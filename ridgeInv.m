@@ -48,20 +48,25 @@ if(strcmp(solver,'CG'))
     [x,~] = pcg(@afun,b,tol,100 + ceil(sqrt(L/lambda)));
 
 elseif(strcmp(solver,'SVRG'))
-% Simple (and slow) SVRG implementation (see Johnson, Zhang "Accelerating 
-% Stochastic Gradient Descent using Predictive Variance Reduction"
+% Simple (and slow) SVRG implementation, sampling rows by their squared norms
     n = size(A,1);
+    % SVRG variance bound
     S = sum(sum(A.^2)) + lambda;
+    % Set step size and epoch length
     eta = 1/(2*S);
     m = ceil(S/lambda);
+    % sampling probabilities proportional to sqaured row norms
     rowProbs = sum(A.^2,2)/sum(sum(A.^2));
+    % initialize x = 0
     x = zeros(size(b));
     xt = x;
     done = false;
+    % full gradient computation
     g = (afun(x) - b);
     while(~done)
         ind = randsample(n,m,true,rowProbs);
         for j=1:m
+            % stochastic gradient update step
             w = xt - x;
             xt = xt - eta/rowProbs(ind(j))*(A(ind(j),:)'*(A(ind(j),:)*w)) - eta*lambda*w - eta*g;
         end
