@@ -70,12 +70,10 @@ elseif(strcmp(solver,'SVRG'))
             w = xt - x;
             xt = xt - eta/rowProbs(ind(j))*(A(ind(j),:)'*(A(ind(j),:)*w)) - eta*lambda*w - eta*g;
         end
-        xold = x;
         x = xt;
         if(norm(afun(x) - b) <= tol*norm(b))
             done = true;
         end
-        gold = g;
         g = (afun(x) - b);
     end
 
