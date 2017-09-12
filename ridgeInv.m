@@ -52,27 +52,32 @@ elseif(strcmp(solver,'SVRG'))
 % Stochastic Gradient Descent using Predictive Variance Reduction"
     n = size(A,1);
     m = n/10;
-    eta = 1/L;
+    L = sum(sum(A.^2));
+    rowProbs = sum(A.^2,2)/L;
+    eta = 1/(L+lambda);
     x = zeros(size(b));
     xt = x;
     done = false;
-    g = (afun(x) - b)/n;
+    g = (afun(x) - b);
     while(~done)
         for j=1:m
-            ind = randi(n);
+            ind = randsample(n,1,true,rowProbs);
             w = xt - x;
-            xt = xt - eta*((A(ind,:)*w)*A(ind,:)' + lambda*w+ g);
+            xt = xt - eta/rowProbs(ind)*(A(ind,:)'*(A(ind,:)*w)) - eta*lambda*w+eta*g;
         end
         xold = x;
         x = xt;
+        if(isnan(norm(x))) break; end
         if(norm(afun(x) - b) <= tol*norm(b))
             done = true;
         end
+        norm(afun(x) - b)
+        norm(x)
         gold = g;
-        g = (afun(x) - b)/n;
+        g = (afun(x) - b);
         % Step size adjustment from "Barzilai-Borwein Step Size for 
         % Stochastic Gradient Descent", Tan, Ma, Dai, Qian
-        eta = (1/m)*norm(x - xold)^2/((x - xold)'*(g - gold));
+        %eta = (1/m)*norm(x - xold)^2/((x - xold)'*(g - gold));
     end
 
 %elseif(strcmp(solver,'MYSOLVER'))
