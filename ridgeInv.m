@@ -51,33 +51,27 @@ elseif(strcmp(solver,'SVRG'))
 % Simple (and slow) SVRG implementation (see Johnson, Zhang "Accelerating 
 % Stochastic Gradient Descent using Predictive Variance Reduction"
     n = size(A,1);
-    m = n/10;
-    L = sum(sum(A.^2));
-    rowProbs = sum(A.^2,2)/L;
-    eta = 1/(L+lambda);
+    S = sum(sum(A.^2)) + lambda;
+    eta = 1/(2*S);
+    m = ceil(S/lambda);
+    rowProbs = sum(A.^2,2)/sum(sum(A.^2));
     x = zeros(size(b));
     xt = x;
     done = false;
     g = (afun(x) - b);
     while(~done)
+        ind = randsample(n,m,true,rowProbs);
         for j=1:m
-            ind = randsample(n,1,true,rowProbs);
             w = xt - x;
-            xt = xt - eta/rowProbs(ind)*(A(ind,:)'*(A(ind,:)*w)) - eta*lambda*w+eta*g;
+            xt = xt - eta/rowProbs(ind(j))*(A(ind(j),:)'*(A(ind(j),:)*w)) - eta*lambda*w - eta*g;
         end
         xold = x;
         x = xt;
-        if(isnan(norm(x))) break; end
         if(norm(afun(x) - b) <= tol*norm(b))
             done = true;
         end
-        norm(afun(x) - b)
-        norm(x)
         gold = g;
         g = (afun(x) - b);
-        % Step size adjustment from "Barzilai-Borwein Step Size for 
-        % Stochastic Gradient Descent", Tan, Ma, Dai, Qian
-        %eta = (1/m)*norm(x - xold)^2/((x - xold)'*(g - gold));
     end
 
 %elseif(strcmp(solver,'MYSOLVER'))
