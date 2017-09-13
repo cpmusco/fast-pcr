@@ -70,3 +70,16 @@ norm(x - V*(D>lambda)*V'*x)/norm(x)
 ````
 
 ### Implementation Options and Parameter Tuning
+
+If a higher accuracy solution is required, the `iter` and `tol` parameters should be increased from the defaults of `40` and `1e-3`:
+```
+x = fastpcr(A, b, lambda, 200, 'CG', 'LANCZOS', 1e-8);
+norm(x-xDirect)/norm(xDirect)
+1.0304e-08
+```
+
+Doing so will slow the algorithm as the number of calls to a ridge regression algorithm is equal to `iter` and the algorithm will be run to accuracy `tol`. The most effective way to improve the runtime of `fastpcr` is to provide a faster ridge regression algorithm in `ridgeInv.m`. This algorithm can be customized to your dataset and computational environment. 
+
+We do not recommend running `fastpcr` with the `method` option set to `EXPLICIT`. Doing so almost always results in a less accurate solution. A full error analysis of the `LANCZOS` method can be found in [Stability of the Lanczos Method for Matrix Function Approximation](https://arxiv.org/abs/1708.07788).
+
+
