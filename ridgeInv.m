@@ -33,7 +33,12 @@ if nargin < 5
     tol = 1e-6;
 end
 if nargin < 6
-    L = svds(A,1)^2;
+    % compute rough spectral norm estimate
+    top = rand(size(A,2),1);
+    for i=1:5
+        top = A'*(A*top); top = normc(top);
+    end
+    L = (top'*A')*(A*top);
 end
 if(lambda < 0 || tol < 0 || L < 0)
     error('ridgeInv:BadInput','one or more inputs outside required range');

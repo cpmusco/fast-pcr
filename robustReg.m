@@ -41,7 +41,12 @@ if(lambda < 0 || tol < 0)
     error('robustReg:BadInput','one or more inputs outside required range');
 end
 
-L = svds(A,1)^2;
+% compute rough spectral norm estimate
+top = rand(size(A,2),1);
+for i=1:5
+    top = A'*(A*top); top = normc(top);
+end
+L = (top'*A')*(A*top);
 
 if(strcmp(method,'SIMPLE'))
     x = ridgeInv(A, p, tol*lambda, solver, tol, L);

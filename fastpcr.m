@@ -11,7 +11,7 @@ function x = fastpcr(A, b, lambda, iter, solver, method, tol)
 %       All eigenvectors of A'*A with eigenvalue < lambda (i.e., all 
 %       singular vectors of A with squared singular values < lambda)       
 %       will be  ignored for the regression.
-%  * iter : number of iterations, default = 50.
+%  * iter : number of iterations, default = 40.
 %       Each iteration requires the solution of one ridge regression
 %       problem on A with ridge parameter lambda.
 %  * solver: black box routine for ridge regression.
@@ -22,7 +22,7 @@ function x = fastpcr(A, b, lambda, iter, solver, method, tol)
 %       'LANCZOS' for a standard Lanczos method, default
 %       'EXPLICIT' for the explicit method analyzed in "Principal Component 
 %       Projection Without Principal Component Analysis", Frostig et al. ICML '16
-%  * tol: accuracy for calls to ridge regression, default 1e-5
+%  * tol: accuracy for calls to ridge regression, default 1e-3
 
 %
 %  output:
@@ -43,7 +43,7 @@ if nargin < 3
     lambda = svds(A,1)^2/100;
 end
 if nargin < 4
-    iter = 50;
+    iter = 40;
 end
 if nargin < 5
     solver = 'CG';
@@ -52,7 +52,7 @@ if nargin < 6
     method = 'LANCZOS';
 end
 if nargin < 7
-    tol = 1e-5;
+    tol = 1e-3;
 end
 if(lambda < 0 || tol < 0 || iter < 1)
     error('fastpcr:BadInput','one or more inputs outside required range');
@@ -63,7 +63,13 @@ end
 % for ridge regression, we project A'*b onto A's top singular directions 
 % note however that the following code works for projecting any vector z
 z = A'*b;
-L = svds(A,1)^2;
+% compute rough spectral norm estimate for system solving parameters
+top = rand(size(A,2),1);
+for i=1:5
+    top = A'*(A*top); top = normc(top);
+end
+L = (top'*A')*(A*top);
+
 
 if(strcmp(method,'EXPLICIT'))
     pz = ridgeInv(A,A'*(A*z),lambda,solver,tol,L);
