@@ -80,6 +80,6 @@ norm(x-xDirect)/norm(xDirect)
 
 Doing so will slow down `fastpcr`: the algorithm requires `iter` calls to a ridge regression algorithm that runs to accuracy `tol`. The most effective way to improve the runtime of `fastpcr` is to provide a faster ridge regression algorithm in `ridgeInv.m`. This algorithm can be customized to your dataset and computational environment. 
 
-We do not recommend running `fastpcr` with the `method` option set to `EXPLICIT`. Doing so almost always result in a less accurate solution. A full error analysis of the `LANCZOS` method can be found in [Stability of the Lanczos Method for Matrix Function Approximation](https://arxiv.org/abs/1708.07788).
+We do not recommend running `fastpcr` with the `method` option set to `EXPLICIT`. Doing so will almost always result in a less accurate solution. A full error analysis of the `LANCZOS` method can be found in [Stability of the Lanczos Method for Matrix Function Approximation](https://arxiv.org/abs/1708.07788).
 
 
