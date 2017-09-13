@@ -10,6 +10,10 @@ Download `fastpcr.m`,`lanczos.m`,`ridgeInv.m`, and `robustReg.m`, [add to MATLAB
 
 **Principal Component Regression (PCR)** is a common and effective form of regularized linear regression. Given an n x d matrix **A** and threshold &lambda;, let **P**<sub>&lambda;</sub> be a d x d projection matrix onto the span of all right singular vectors (i.e. principal components) of **A** with corresponding squared singular value > &lambda;.  PCR computes **x** = **P**<sub>&lambda;</sub>(**A**<sup>T</sup>**A**)<sup>-1</sup>**A**<sup>T</sup>**b**. In other words, it solves a standard linear regression problem but restricts the solution to lie in the space spanned by **A**'s top singular vectors.
 
+Most implementations of PCR first perform an eigendecoposition of **A**<sup>T</sup>**A** in order to compute **P**<sub>&lambda;</sub> before seperately solving a regression problem. The eigendecomposition is a computational bottle neck. 
+  
+`fastpcr` avoids this step entirely through matrix polynomial methods (either explicit or implicit via the Lanczos method). To do so, it requires access to an algorithm for standard [&#8467;<sub>2</sub> regularized regression](https://en.wikipedia.org/wiki/Tikhonov_regularization). It uses a few calls to this algorithm to construct a solution to the Principal Component Regression problem.
+
 ### Usage
 
 **Input:**
@@ -33,29 +37,49 @@ Download `fastpcr.m`,`lanczos.m`,`ridgeInv.m`, and `robustReg.m`, [add to MATLAB
 
 ```
 % generate random test problem
-A = randn(4000,1000); b = randn(4000,1); k = 500;
-[U,S,V] = svds(A,1000);
+A = randn(10000,4000); b = randn(10000,1);
+[U,S,V] = svd(A,'econ');
 % modify to have (slightly) decaying spectrum
-s = diag(S); s(1:k) = s(1:k)+4;
-S = diag(s); A = U*S*V';
-lambda = (s(k)-2)^2;
+k = 500;
+s = diag(S); s(1:k) = s(1:k)+10;
+A = U*diag(s)*V';
+lambda = (s(k)-5)^2;
 
 % compute approximate PCR solution
-x = fastpcr(A, b, lambda, 50, 'CG', 'LANCZOS', 1e-5);
+tic; x = fastpcr(A, b, lambda); toc;
+Elapsed time is 10.399166 seconds.
 ```
 
-`fastpcr` can be much faster than a direct PCR solve for large inputs, but is still very accurate.
+`fastpcr` is typically faster than a direct PCR solve, but is still very accurate.
 
 ```
 % compare to direct method
-x = fastpcr(A, b, lambda, 50, 'CG', 'LANCZOS', 1e-5);
-[~,~,V] = svds(A,k); xDirect = V(:,1:k)*(V(:,1:k)'*(A\b));
+tic;
+[V,D] = eig(A'*A); 
+xDirect = V*(D>lambda)*V'*(A\b);
+toc;
+Elapsed time is 37.365212 seconds.
 
 % parameter vector error
 norm(x-xDirect)/norm(xDirect)
-0.0064
+0.0092
 
 % projection error
-norm(x - V(:,1:k)*(V(:,1:k)'*x))/norm(x)
-0.0060
+norm(x - V*(D>lambda)*V'*x)/norm(x)
+0.0048
 ````
+
+### Implementation Options and Parameter Tuning
+
+If a higher accuracy solution is required, the `iter` and `tol` parameters should be increased from the defaults of `40` and `1e-3`:
+```
+x = fastpcr(A, b, lambda, 200, 'CG', 'LANCZOS', 1e-8);
+norm(x-xDirect)/norm(xDirect)
+1.0304e-08
+```
+
+Doing so will slow down `fastpcr`: the algorithm requires `iter` calls a ridge regression algorithm that runs to accuracy `tol`. The most effective way to improve the runtime of `fastpcr` is to provide a faster ridge regression algorithm in `ridgeInv.m`. This algorithm can be customized to your dataset and computational environment. 
+
+We do not recommend running `fastpcr` with the `method` option set to `EXPLICIT`. Doing so almost always result in a less accurate solution. A full error analysis of the `LANCZOS` method can be found in [Stability of the Lanczos Method for Matrix Function Approximation](https://arxiv.org/abs/1708.07788).
+
+
