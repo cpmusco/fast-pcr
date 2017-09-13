@@ -22,10 +22,10 @@ Most implementations of PCR first perform an eigendecoposition of **A**<sup>T</s
 - `A` : design matrix
 -  `b` : response vector
 - `lambda` : eigenvalue cut off, default = ||`A`<sup>T</sup>`A`||<sub>2</sub>/100. All eigenvectors of `A`<sup>T</sup>`A` with eigenvalue < `lambda` (i.e., all singular vectors of `A` with squared singular value < `lambda`) will be ignored for the regression.
-- `iter` : number of iterations, default = 50. Each iteration requires the solution of one ridge regression problem on `A` with ridge parameter `lambda`.
+- `iter` : number of iterations, default = 40. Each iteration requires the solution of one ridge regression problem on `A` with ridge parameter `lambda`.
 - `solver`: black box routine for ridge regression, default = 'CG'. Set to 'CG' for Conjugate Gradient solver, 'SVRG' for Stochastic Variance Reduced Gradient solver, or any other solver implemented in `ridgeInv.m`.
 - `method`: the technique used for applying matrix polynomials, default = 'LANCZOS'. Set to 'LANCZOS' for a standard Lanczos method analyzed [here](https://arxiv.org/abs/1708.07788), or 'EXPLICIT' for the explicit method analyzed in our [ICML paper](http://proceedings.mlr.press/v48/frostig16.html).
-- `tol`: accuracy for calls to ridge regression, default 1e-5
+- `tol`: accuracy for calls to ridge regression, default 1e-3
 
 **Output:**
 
@@ -78,7 +78,7 @@ norm(x-xDirect)/norm(xDirect)
 1.0304e-08
 ```
 
-Doing so will slow down `fastpcr`: the algorithm requires `iter` calls a ridge regression algorithm that runs to accuracy `tol`. The most effective way to improve the runtime of `fastpcr` is to provide a faster ridge regression algorithm in `ridgeInv.m`. This algorithm can be customized to your dataset and computational environment. 
+Doing so will slow down `fastpcr`: the algorithm requires `iter` calls to a ridge regression algorithm that runs to accuracy `tol`. The most effective way to improve the runtime of `fastpcr` is to provide a faster ridge regression algorithm in `ridgeInv.m`. This algorithm can be customized to your dataset and computational environment. 
 
 We do not recommend running `fastpcr` with the `method` option set to `EXPLICIT`. Doing so almost always result in a less accurate solution. A full error analysis of the `LANCZOS` method can be found in [Stability of the Lanczos Method for Matrix Function Approximation](https://arxiv.org/abs/1708.07788).
 
